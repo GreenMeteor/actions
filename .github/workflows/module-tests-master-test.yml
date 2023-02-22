@@ -196,5 +196,5 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: my-artifact
-          path: ${{ env.GITHUB_WORKSPACE }}/protected/modules/${{ env.module-id }}/tests/codeception/_output/*
+          path: protected/modules/${{ env.module-id }}/tests/codeception/_output/*
 
