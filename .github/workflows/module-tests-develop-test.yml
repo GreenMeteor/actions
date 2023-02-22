@@ -194,11 +194,10 @@ jobs:
           php $GITHUB_WORKSPACE/protected/vendor/bin/codecept build
           php $GITHUB_WORKSPACE/protected/vendor/bin/codecept run --env github
           
-          
       - name: Archive Test Results
         if: failure()
         uses: actions/upload-artifact@v3
         with:
           name: my-artifact
           path: protected/modules/${{ env.module-id }}/tests/codeception/_output/*
-          
+
