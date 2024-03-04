@@ -13,7 +13,7 @@ on:
         type: string
       php:
         description: PHP versions to test, separated by comma.
-        default: '7.4,8.0,8.1'
+        default: '7.4, 8.0, 8.1'
         type: string
       mysql:
         description: MySQL versions to test, separated by comma.
