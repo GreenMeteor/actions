@@ -13,7 +13,7 @@ on:
         type: string
       php:
         description: PHP versions to test, separated by comma.
-        default: '7.4, 8.0, 8.1'
+        default: '7.4,8.0,8.1'
         type: string
       mysql:
         description: MySQL versions to test, separated by comma.
@@ -31,13 +31,13 @@ jobs:
       theme-name: ${{ inputs.theme-name }}
       key: cache-v1
 
-    runs-on: ${{ fromJson(inputs.os) }}
+    runs-on: ${{ inputs.os }}
 
     strategy:
       matrix:
-        os: ${{ fromJson(inputs.os) }}
-        php: ${{ fromJson(inputs.php) }}
-        mysql: ${{ fromJson(inputs.mysql) }}
+        os: [${{ inputs.os }}]
+        php: [${{ inputs.php }}]
+        mysql: [${{ inputs.mysql }}]
 
     services:
       mysql:
