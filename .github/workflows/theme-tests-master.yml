@@ -1,0 +1,112 @@
+name: Tests for HumHub Themes
+
+on:
+  workflow_call:
+    inputs:
+      theme-name:
+        description: Theme name.
+        required: true
+        type: string
+      os:
+        description: OS to test, separated by comma.
+        default: 'ubuntu-latest'
+        type: string
+      php:
+        description: PHP versions to test, separated by comma.
+        default: '7.4, 8.0, 8.1'
+        type: string
+      mysql:
+        description: MySQL versions to test, separated by comma.
+        default: '5.7'
+        type: string
+      install-composer:
+        description: Install composer dependencies for the theme.
+        default: false
+        type: boolean
+
+jobs:
+  tests:
+    name: Theme Tests
+    env:
+      theme-name: ${{ inputs.theme-name }}
+      key: cache-v1
+
+    runs-on: ${{ fromJson(inputs.os) }}
+
+    strategy:
+      matrix:
+        os: ${{ fromJson(inputs.os) }}
+        php: ${{ fromJson(inputs.php) }}
+        mysql: ${{ fromJson(inputs.mysql) }}
+
+    services:
+      mysql:
+        image: mysql:${{ matrix.mysql }}
+        env:
+          MYSQL_DATABASE: humhub_test
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+      - name: Start Selenium
+        run: |
+          docker run --detach --net=host --shm-size="2g" selenium/standalone-chrome
+          
+      - uses: actions/setup-node@v1
+
+      - name: Checkout HumHub Core
+        uses: actions/checkout@v2
+        with:
+          repository: humhub/humhub
+          ref: master
+
+      - name: Checkout Theme
+        run: git clone --branch ${{ inputs.theme-name }} --depth 1 https://github.com/humhub/humhub.git themes/${{ inputs.theme-name }}
+
+      - name: Install PHP with extensions
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: curl, intl, pdo, pdo_mysql, zip, exif, fileinfo, mbstring, gd, ldap
+          ini-values: date.timezone='UTC'
+
+      - name: Validate composer.json and composer.lock
+        run: composer validate
+
+      - name: Cache dependencies installed with composer
+        uses: actions/cache@v1
+        with:
+          path: ~/.composer/cache
+          key: php${{ matrix.php }}-composer-${{ hashFiles('**/composer.json') }}
+          restore-keys: |
+            php${{ matrix.php }}-composer-
+
+      - name: Install dependencies with composer
+        if: ${{ inputs.install-composer }}
+        run: composer install --prefer-dist --no-interaction --no-progress --optimize-autoloader --ansi
+
+      - name: Run migrations
+        run: php protected/humhub/tests/codeception/bin/yii migrate/up --includeModuleMigrations=1 --interactive=0
+
+      - name: Run installer
+        run: php protected/humhub/tests/codeception/bin/yii installer/auto
+
+      - name: Build codeception core files
+        run: |
+          cd $GITHUB_WORKSPACE/protected/humhub/tests
+          php ../../vendor/bin/codecept build
+
+      - name: Run test suite
+        run: |
+          export HUMHUB_PATH=$GITHUB_WORKSPACE
+          cd $GITHUB_WORKSPACE/themes/${{ inputs.theme-name }}/tests
+          php $GITHUB_WORKSPACE/protected/vendor/bin/codecept run --env github
+          
+      - name: Archive Test Results
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: theme-test-results
+          path: themes/${{ inputs.theme-name }}/tests/codeception/_output/*
