@@ -31,13 +31,13 @@ jobs:
       theme-name: ${{ inputs.theme-name }}
       key: cache-v1
 
-    runs-on: ${{ inputs.os }}
+    runs-on: ${{ fromJson(inputs.os) }}
 
     strategy:
       matrix:
-        os: [${{ inputs.os }}]
-        php: [${{ inputs.php }}]
-        mysql: [${{ inputs.mysql }}]
+        os: ${{ fromJson(inputs.os) }}
+        php: ${{ fromJson(inputs.php) }}
+        mysql: ${{ fromJson(inputs.mysql) }}
 
     services:
       mysql:
